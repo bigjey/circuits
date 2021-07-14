@@ -1,5 +1,5 @@
 {
-  "homepage": "/build/",
+  "homepage": "./",
   "name": "circuits",
   "version": "0.1.0",
   "private": true,
