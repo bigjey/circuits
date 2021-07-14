@@ -42,188 +42,196 @@ class Output {
   }
 }
 
-class NOT_Gate {
-  name = "NOT";
-  type = "not";
-  position = { x: 0, y: 0 };
+let _globalGateId = 1;
 
+class CircuitBase {
   inputs = [];
+  inputById = {};
 
   outputs = [];
+  outputById = {};
 
-  constructor(id, x, y) {
-    this.id = id;
-
-    this.position.x = x;
-    this.position.y = y;
-
-    this.inputs.push(new Input(`${this.id}:i1`));
-
-    this.outputs.push(new Output(`${this.id}:o1`));
-
-    this.evaluate();
-  }
-
-  evaluate() {
-    if (this.inputs[0].value === 1) {
-      this.outputs[0].state = 0;
-    } else {
-      this.outputs[0].state = 1;
-    }
-  }
-}
-
-class AND_Gate {
-  name = "AND";
-  type = "and";
-  position = { x: 0, y: 0 };
-
-  inputs = [];
-
-  outputs = [];
-
-  constructor(id, x, y) {
-    this.id = id;
-    this.position.x = x;
-    this.position.y = y;
-
-    this.inputs.push(new Input(`${this.id}:i1`));
-    this.inputs.push(new Input(`${this.id}:i2`));
-
-    this.outputs.push(new Output(`${this.id}:o1`));
-
-    this.evaluate();
-  }
-
-  evaluate() {
-    if (this.inputs[0].value === 1 && this.inputs[1].value === 1) {
-      this.outputs[0].state = 1;
-    } else {
-      this.outputs[0].state = 0;
-    }
-  }
-}
-
-class Circuit {
-  _gateId = 1;
-  _inputId = 1;
-  _outputId = 1;
-
-  inputs = {};
-  outputs = {};
   gates = {};
   connections = new Set();
 
-  addInput(y) {
-    const input = new Input(`c:i${this._inputId++}`, 0, y);
+  _inputId = 0;
+  _outputId = 0;
 
-    this.inputs[input.id] = input;
+  position = { x: 0, y: 0 };
+
+  constructor(inputs, outputs, gates, connections, evaluationFn) {
+    this.id = _globalGateId++;
+
+    for (let inputIndex = 0; inputIndex < inputs; ++inputIndex) {
+      const input = new Input(`${this.id}:i${this._inputId++}`, 0, 0);
+      this.inputById[input.id] = input;
+      this.inputs.push(input.id);
+    }
+
+    for (let outputIndex = 0; outputIndex < outputs; ++outputIndex) {
+      const output = new Output(`${this.id}:o${this._outputId++}`, 0, 0);
+      this.outputById[output.id] = output;
+      this.outputs.push(output.id);
+    }
+
+    const gateByOldId = {};
+    for (const gate of gates) {
+      const g = new gate.constructorClass();
+      this.gates[g.id] = g;
+      gateByOldId[gate.oldId] = g;
+    }
+
+    for (const connection of connections) {
+      let source,
+        destination = "";
+
+      if (connection.source.type === "self-input") {
+        source = `${this.id}:i${connection.source.oldIndex}`;
+      } else if (connection.source.type === "gate-output") {
+        source = `${gateByOldId[connection.source.gateId].id}:${
+          connection.source.nodeId
+        }`;
+      } else {
+        console.log("wtf???");
+      }
+
+      if (connection.destination.type === "self-output") {
+        destination = `${this.id}:o${connection.destination.oldIndex}`;
+      } else if (connection.destination.type === "gate-input") {
+        destination = `${gateByOldId[connection.destination.gateId].id}:${
+          connection.destination.nodeId
+        }`;
+      } else {
+        console.log("wtf???");
+      }
+
+      this.connections.add(`${source}-${destination}`);
+    }
+
+    if (evaluationFn) {
+      this.evaluate = () => evaluationFn(this);
+    }
+
+    this.evaluate();
+  }
+
+  evaluate() {
+    for (const input of Object.values(this.inputById)) {
+      this.allDestinations(input.id).forEach((nodeId) =>
+        this.updateNode(nodeId)
+      );
+    }
+  }
+
+  addInput(y) {
+    const input = new Input(`${this.id}:i${this._inputId++}`, 0, y);
+
+    this.inputById[input.id] = input;
+    this.inputs.push(input.id);
   }
 
   addOutput(y) {
-    const output = new Output(`c:o${this._outputId++}`, 0, y);
+    const output = new Output(`${this.id}:o${this._outputId++}`, 0, y);
 
-    this.outputs[output.id] = output;
+    this.outputById[output.id] = output;
+    this.outputs.push(output.id);
   }
 
   addGate(gateClass, x, y) {
-    const id = `g${this._gateId++}`;
-    const gate = new gateClass(id, x, y);
+    const gate = new gateClass(x, y);
 
     this.gates[gate.id] = gate;
   }
 
-  addConnection(a, b) {
-    this.connections.add(`${a}-${b}`);
+  addConnection(source, destination) {
+    this.connections.add(`${source}-${destination}`);
 
-    const [gate] = b.split(":");
-
-    if (gate === "c") {
-      this.updateOutput(b);
-    } else if (this.gates[gate]) {
-      this.updateGate(gate);
-    } else {
-      console.error("unknown destination", b);
-    }
+    this.updateNode(destination);
   }
 
   removeInput(inputId) {
-    delete this.inputs[inputId];
+    delete this.inputById[inputId];
+    this.inputs.splice(this.inputs.indexOf(inputId));
 
     const updateList = new Set();
 
-    for (const connection of Array.from(this.connections)) {
+    for (const connection of this.connections) {
       const [source, destination] = connection.split("-");
       if (source === inputId) {
         this.connections.delete(connection);
-
-        const [gate] = destination.split(":");
-        if (gate === "c") {
-          updateList.add(destination);
-        } else {
-          updateList.add(gate);
-        }
+        updateList.add(destination);
       }
     }
 
-    for (const item of updateList) {
-      if (item[0] === "c") {
-        this.updateOutput(item);
-      } else {
-        this.updateGate(item);
-      }
+    for (const nodeId of updateList) {
+      this.updateNode(nodeId);
     }
   }
 
   removeOutput(outputId) {
-    delete this.outputs[outputId];
+    delete this.outputById[outputId];
+    this.outputs.splice(this.outputs.indexOf(outputId));
 
-    for (const source of this.allIncomingSignals(outputId)) {
+    for (const source of this.allSources(outputId)) {
       this.connections.delete(`${source}-${outputId}`);
     }
   }
 
-  getSourceValue(source) {
-    const [gate] = source.split(":");
-    if (gate === "c") {
-      return this.inputs[source].value;
+  allDestinations(source) {
+    const destinations = [];
+    for (const connection of this.connections.values()) {
+      const [_source, _destination] = connection.split("-");
+      if (_source === source) {
+        destinations.push(_destination);
+      }
+    }
+    return destinations;
+  }
+
+  allSources(destination) {
+    const sources = [];
+    for (const connection of this.connections.values()) {
+      const [_source, _destination] = connection.split("-");
+      if (_destination === destination) {
+        sources.push(_source);
+      }
+    }
+    return sources;
+  }
+
+  getSourceValue(nodeId) {
+    const [gateId] = nodeId.split(":");
+    if (this.gates[gateId]) {
+      return this.gates[gateId].outputById[nodeId].value;
+    } else if (this.inputById[nodeId]) {
+      return this.inputById[nodeId].value;
     } else {
-      return this.gates[gate].outputs.find((output) => output.id === source)
-        .value;
+      console.log("wtf???", nodeId);
+      return 0;
     }
   }
 
-  allIncomingSignals(destination) {
-    const signals = [];
-    for (const connection of this.connections.values()) {
-      const [a, b] = connection.split("-");
-      if (b === destination) {
-        signals.push(a);
-      }
+  updateNode(nodeId) {
+    const [gateId] = nodeId.split(":");
+    if (this.gates[gateId]) {
+      this.updateGate(gateId);
+    } else if (this.outputById[nodeId]) {
+      this.updateOutput(nodeId);
+    } else {
+      console.log("wtf???", nodeId);
     }
-    return signals;
-  }
-
-  allOutcomingSignals(source) {
-    const signals = [];
-    for (const connection of this.connections.values()) {
-      const [a, b] = connection.split("-");
-      if (a === source) {
-        signals.push(b);
-      }
-    }
-    return signals;
   }
 
   updateGate(gateId) {
     const gate = this.gates[gateId];
 
-    for (const gateInput of gate.inputs) {
-      gateInput.state = 0;
-      for (const signal of this.allIncomingSignals(gateInput.id)) {
-        const value = this.getSourceValue(signal);
+    for (const inputId of gate.inputs) {
+      const input = gate.inputById[inputId];
+      input.state = 0;
+      for (const source of this.allSources(input.id)) {
+        const value = this.getSourceValue(source);
         if (value === 1) {
-          gateInput.state = 1;
+          input.state = 1;
           break;
         }
       }
@@ -231,30 +239,110 @@ class Circuit {
 
     gate.evaluate();
 
-    for (const gateOutput of gate.outputs) {
-      for (const signal of this.allOutcomingSignals(gateOutput.id)) {
-        const [gate] = signal.split(":");
-        if (gate === "c") {
-          this.updateOutput(signal);
-        } else {
-          this.updateGate(gate);
-        }
+    for (const outputId of gate.outputs) {
+      const output = gate.outputById[outputId];
+      for (const destination of this.allDestinations(output.id)) {
+        this.updateNode(destination);
       }
     }
   }
 
   updateOutput(outputId) {
-    for (const signal of circuit.allIncomingSignals(outputId)) {
-      const value = this.getSourceValue(signal);
+    const output = this.outputById[outputId];
+    output.state = 0;
+    for (const source of this.allSources(outputId)) {
+      const value = this.getSourceValue(source);
       if (value === 1) {
-        this.outputs[outputId].state = 1;
-        return;
+        output.state = 1;
+        break;
       }
     }
+  }
 
-    this.outputs[outputId].state = 0;
+  transformToGate(name) {
+    const inputsCount = this.inputs.length;
+    const outputsCount = this.outputs.length;
+
+    const gates = [];
+    for (const gate of Object.values(this.gates)) {
+      gates.push({
+        constructorClass: gate.constructor,
+        oldId: gate.id,
+      });
+    }
+
+    const connections = [];
+    for (const connection of this.connections) {
+      const [source, destination] = connection.split("-");
+
+      const conn = {};
+
+      const [sourceGate, sourceId] = source.split(":");
+      const [destinationGate, destinationId] = destination.split(":");
+
+      if (this.inputById[source]) {
+        conn.source = {
+          type: "self-input",
+          nodeId: sourceId,
+          oldIndex: this.inputs.indexOf(source),
+        };
+      } else if (this.gates[sourceGate]) {
+        conn.source = {
+          type: "gate-output",
+          nodeId: sourceId,
+          gateId: sourceGate,
+        };
+      }
+
+      if (this.outputById[destination]) {
+        conn.destination = {
+          type: "self-output",
+          nodeId: sourceId,
+          oldIndex: this.outputs.indexOf(destination),
+        };
+      } else if (this.gates[destinationGate]) {
+        conn.destination = {
+          type: "gate-input",
+          nodeId: destinationId,
+          gateId: destinationGate,
+        };
+      }
+
+      connections.push(conn);
+    }
+
+    console.log("create class", {
+      name,
+      inputsCount,
+      outputsCount,
+      gates,
+      connections,
+    });
+
+    const newCircuitClass = createCircuit(
+      name,
+      inputsCount,
+      outputsCount,
+      gates,
+      connections
+    );
+
+    return newCircuitClass;
   }
 }
+
+const createCircuit = (name, inputs, outputs, gates, connections, evalFn) => {
+  return class DynamicGate extends CircuitBase {
+    name = name;
+
+    constructor(x = 0, y = 0) {
+      super(inputs, outputs, gates, connections, evalFn);
+
+      this.position.x = x;
+      this.position.y = y;
+    }
+  };
+};
 
 const InputNode = ({ input, connections, ...rest }) => {
   return (
@@ -314,7 +402,7 @@ const GateNode = ({ gate, connections, onConnectionMade }) => {
       }}
     >
       <div className="circuit-gate-inputs">
-        {gate.inputs.map((input) => (
+        {Object.values(gate.inputById).map((input) => (
           <div
             key={input.id}
             id={input.id}
@@ -333,7 +421,7 @@ const GateNode = ({ gate, connections, onConnectionMade }) => {
       </div>
       <div className="circuit-gate-name">{gate.name}</div>
       <div className="circuit-gate-outputs">
-        {gate.outputs.map((output) => (
+        {Object.values(gate.outputById).map((output) => (
           <div
             key={output.id}
             id={output.id}
@@ -389,18 +477,42 @@ const Connection = ({ start, end, complete = false }) => {
   return <line x1={x1} y1={y1} x2={x2} y2={y2} />;
 };
 
-const circuit = new Circuit();
-circuit.addGate(AND_Gate, 100, 100);
-circuit.addGate(NOT_Gate, 300, 100);
+const EmptyCurcuit = createCircuit("BASE", 0, 0, [], []);
+
+let circuit = new EmptyCurcuit();
+
+const AND_Gate = createCircuit("AND", 2, 1, [], [], function (gate) {
+  const i1 = gate.inputById[gate.inputs[0]];
+  const i2 = gate.inputById[gate.inputs[1]];
+  const o1 = gate.outputById[gate.outputs[0]];
+
+  if (i1.value === 1 && i2.value === 1) {
+    o1.state = 1;
+  } else {
+    o1.state = 0;
+  }
+});
+
+const NOT_Gate = createCircuit("NOT", 1, 1, [], [], function (gate) {
+  const i1 = gate.inputById[gate.inputs[0]];
+  const o1 = gate.outputById[gate.outputs[0]];
+
+  if (i1.value === 1) {
+    o1.state = 0;
+  } else {
+    o1.state = 1;
+  }
+});
 
 let connectionStart = null;
 let currentlyMovingGate = null;
-let movingDiff = { x: 0, y: 0 };
 let mousePos = { x: 0, y: 0 };
 const availableGates = [
   { classPointer: AND_Gate, name: "AND" },
   { classPointer: NOT_Gate, name: "NOT" },
 ];
+
+window.circuit = circuit;
 
 function App() {
   const [, updateState] = React.useState();
@@ -457,7 +569,7 @@ function App() {
             forceUpdate();
           }}
         />
-        {Object.values(circuit.inputs).map((input) => (
+        {Object.values(circuit.inputById).map((input) => (
           <InputNode
             key={input.id}
             input={input}
@@ -467,16 +579,9 @@ function App() {
                 circuit.removeInput(input.id);
               } else {
                 input.toggle();
-                for (const destination of circuit.allOutcomingSignals(
-                  input.id
-                )) {
-                  const [gate] = destination.split(":");
-                  if (circuit.gates[gate]) {
-                    circuit.updateGate(gate);
-                  } else if (gate === "c") {
-                    circuit.updateOutput(destination);
-                  }
-                }
+                circuit
+                  .allDestinations(input.id)
+                  .forEach((destination) => circuit.updateNode(destination));
               }
 
               forceUpdate();
@@ -490,7 +595,7 @@ function App() {
             }}
           />
         ))}
-        {Object.values(circuit.outputs).map((output) => (
+        {Object.values(circuit.outputById).map((output) => (
           <OutputNode
             key={output.id}
             output={output}
@@ -532,16 +637,53 @@ function App() {
           )}
         </svg>
       </div>
-      {availableGates.map((gate) => (
-        <div
-          onClick={() => {
-            circuit.addGate(gate.classPointer, 300, 300);
-            forceUpdate();
-          }}
-        >
-          {gate.name}
+      <div className="tools">
+        <div className="tools-save">
+          <input
+            id="gate-name"
+            className="tools-save-name"
+            placeholder="New gate name"
+          />
+          <button
+            className="tools-save-submit"
+            onClick={(e) => {
+              const nameInput = document.getElementById("gate-name");
+
+              if (nameInput.value.length) {
+                const gateClass = circuit.transformToGate(nameInput.value);
+
+                availableGates.push({
+                  name: nameInput.value,
+                  classPointer: gateClass,
+                });
+
+                nameInput.value = "";
+                circuit = new EmptyCurcuit();
+
+                forceUpdate();
+              }
+            }}
+          >
+            Create
+          </button>
         </div>
-      ))}
+        <div className="tools-gates">
+          {availableGates.map((gate) => (
+            <div>
+              <button
+                className="tools-gate"
+                key={gate.name}
+                onClick={() => {
+                  circuit.addGate(gate.classPointer, 50, 20);
+                  forceUpdate();
+                }}
+              >
+                {gate.name}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
