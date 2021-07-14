@@ -16,7 +16,7 @@
   pointer-events: all;
 }
 
-.curcuit-inputs {
+.circuit-inputs {
   position: absolute;
   height: 100%;
   width: 40px;
@@ -28,10 +28,10 @@
   z-index: 10;
   pointer-events: all;
 }
-.curcuit-inputs:hover {
+.circuit-inputs:hover {
   background: #2225;
 }
-.curcuit-outputs {
+.circuit-outputs {
   position: absolute;
   height: 100%;
   width: 40px;
@@ -43,7 +43,7 @@
   z-index: 10;
   pointer-events: all;
 }
-.curcuit-outputs:hover {
+.circuit-outputs:hover {
   background: #2225;
 }
 
@@ -157,4 +157,9 @@ svg {
   pointer-events: none;
   stroke: #222;
   stroke-width: 2;
+}
+
+svg line:hover {
+  stroke: #fff;
+  pointer-events: all;
 }

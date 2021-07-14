@@ -149,10 +149,38 @@ class Circuit {
 
   removeInput(inputId) {
     delete this.inputs[inputId];
+
+    const updateList = new Set();
+
+    for (const connection of Array.from(this.connections)) {
+      const [source, destination] = connection.split("-");
+      if (source === inputId) {
+        this.connections.delete(connection);
+
+        const [gate] = destination.split(":");
+        if (gate === "c") {
+          updateList.add(destination);
+        } else {
+          updateList.add(gate);
+        }
+      }
+    }
+
+    for (const item of updateList) {
+      if (item[0] === "c") {
+        this.updateOutput(item);
+      } else {
+        this.updateGate(item);
+      }
+    }
   }
 
   removeOutput(outputId) {
     delete this.outputs[outputId];
+
+    for (const source of this.allIncomingSignals(outputId)) {
+      this.connections.delete(`${source}-${outputId}`);
+    }
   }
 
   getSourceValue(source) {
@@ -193,16 +221,7 @@ class Circuit {
     for (const gateInput of gate.inputs) {
       gateInput.state = 0;
       for (const signal of this.allIncomingSignals(gateInput.id)) {
-        console.log({ signal });
-        const [gate] = signal.split(":");
-        let value;
-        if (gate === "c") {
-          value = this.inputs[signal].value;
-        } else {
-          value = this.gates[gate].outputs.find(
-            (output) => output.id === signal
-          ).value;
-        }
+        const value = this.getSourceValue(signal);
         if (value === 1) {
           gateInput.state = 1;
           break;
@@ -213,9 +232,7 @@ class Circuit {
     gate.evaluate();
 
     for (const gateOutput of gate.outputs) {
-      console.log({ gateOutput });
       for (const signal of this.allOutcomingSignals(gateOutput.id)) {
-        console.log({ signal });
         const [gate] = signal.split(":");
         if (gate === "c") {
           this.updateOutput(signal);
@@ -227,16 +244,8 @@ class Circuit {
   }
 
   updateOutput(outputId) {
-    for (const signal of curcuit.allIncomingSignals(outputId)) {
-      const [gate] = signal.split(":");
-      let value;
-      if (gate === "c") {
-        value = this.inputs[signal].value;
-      } else {
-        value = this.gates[gate].outputs.find(
-          (output) => output.id === signal
-        ).value;
-      }
+    for (const signal of circuit.allIncomingSignals(outputId)) {
+      const value = this.getSourceValue(signal);
       if (value === 1) {
         this.outputs[outputId].state = 1;
         return;
@@ -286,6 +295,23 @@ const GateNode = ({ gate, connections, onConnectionMade }) => {
         left: gate.position.x,
         top: gate.position.y,
       }}
+      onMouseDown={(e) => {
+        if (currentlyMovingGate) {
+          return;
+        }
+
+        currentlyMovingGate = {
+          gateId: gate.id,
+          startMousePos: {
+            x: e.clientX,
+            y: e.clientY,
+          },
+          startGatePos: {
+            x: gate.position.x,
+            y: gate.position.y,
+          },
+        };
+      }}
     >
       <div className="circuit-gate-inputs">
         {gate.inputs.map((input) => (
@@ -314,12 +340,13 @@ const GateNode = ({ gate, connections, onConnectionMade }) => {
             className={`circuit-gate-output ${
               output.value === 1 ? "circuit-gate-output-on" : ""
             }`}
-            onMouseDown={() => {
+            onMouseDown={(e) => {
               if (connectionStart) {
                 return;
               }
 
               connectionStart = output.id;
+              e.stopPropagation();
             }}
           ></div>
         ))}
@@ -362,18 +389,25 @@ const Connection = ({ start, end, complete = false }) => {
   return <line x1={x1} y1={y1} x2={x2} y2={y2} />;
 };
 
-const curcuit = new Circuit();
-curcuit.addGate(AND_Gate, 100, 100);
-curcuit.addGate(NOT_Gate, 300, 100);
+const circuit = new Circuit();
+circuit.addGate(AND_Gate, 100, 100);
+circuit.addGate(NOT_Gate, 300, 100);
 
 let connectionStart = null;
+let currentlyMovingGate = null;
+let movingDiff = { x: 0, y: 0 };
 let mousePos = { x: 0, y: 0 };
+const availableGates = [
+  { classPointer: AND_Gate, name: "AND" },
+  { classPointer: NOT_Gate, name: "NOT" },
+];
+
 function App() {
   const [, updateState] = React.useState();
   const forceUpdate = React.useCallback(() => updateState({}), []);
 
   const onConnection = (a, b) => {
-    curcuit.addConnection(a, b);
+    circuit.addConnection(a, b);
 
     forceUpdate();
   };
@@ -384,6 +418,8 @@ function App() {
         className="circuit"
         onMouseUp={() => {
           connectionStart = null;
+          currentlyMovingGate = null;
+
           forceUpdate();
         }}
         onMouseMove={(e) => {
@@ -392,40 +428,53 @@ function App() {
             mousePos.y = e.clientY;
             forceUpdate();
           }
+
+          if (currentlyMovingGate) {
+            const xDiff = e.clientX - currentlyMovingGate.startMousePos.x;
+            const yDiff = e.clientY - currentlyMovingGate.startMousePos.y;
+
+            const x = currentlyMovingGate.startGatePos.x + xDiff;
+            const y = currentlyMovingGate.startGatePos.y + yDiff;
+
+            circuit.gates[currentlyMovingGate.gateId].position.x = x;
+            circuit.gates[currentlyMovingGate.gateId].position.y = y;
+
+            forceUpdate();
+          }
         }}
       >
         <div
-          className="curcuit-inputs"
+          className="circuit-inputs"
           onClick={(e) => {
-            curcuit.addInput(e.clientY - 20);
+            circuit.addInput(e.clientY - 20);
             forceUpdate();
           }}
         />
         <div
-          className="curcuit-outputs"
+          className="circuit-outputs"
           onClick={(e) => {
-            curcuit.addOutput(e.clientY - 20);
+            circuit.addOutput(e.clientY - 20);
             forceUpdate();
           }}
         />
-        {Object.values(curcuit.inputs).map((input) => (
+        {Object.values(circuit.inputs).map((input) => (
           <InputNode
             key={input.id}
             input={input}
-            connections={curcuit.connections}
+            connections={circuit.connections}
             onClick={(e) => {
               if (e.ctrlKey) {
-                curcuit.removeInput(input.id);
+                circuit.removeInput(input.id);
               } else {
                 input.toggle();
-                for (const destination of curcuit.allOutcomingSignals(
+                for (const destination of circuit.allOutcomingSignals(
                   input.id
                 )) {
                   const [gate] = destination.split(":");
-                  if (curcuit.gates[gate]) {
-                    curcuit.updateGate(gate);
+                  if (circuit.gates[gate]) {
+                    circuit.updateGate(gate);
                   } else if (gate === "c") {
-                    curcuit.updateOutput(destination);
+                    circuit.updateOutput(destination);
                   }
                 }
               }
@@ -441,14 +490,14 @@ function App() {
             }}
           />
         ))}
-        {Object.values(curcuit.outputs).map((output) => (
+        {Object.values(circuit.outputs).map((output) => (
           <OutputNode
             key={output.id}
             output={output}
-            connections={curcuit.connections}
+            connections={circuit.connections}
             onClick={(e) => {
               if (e.ctrlKey) {
-                curcuit.removeOutput(output.id);
+                circuit.removeOutput(output.id);
               }
               forceUpdate();
             }}
@@ -461,16 +510,16 @@ function App() {
             }}
           />
         ))}
-        {Object.values(curcuit.gates).map((gate) => (
+        {Object.values(circuit.gates).map((gate) => (
           <GateNode
             key={gate.id}
             gate={gate}
-            connections={curcuit.connections}
+            connections={circuit.connections}
             onConnectionMade={onConnection}
           />
         ))}
         <svg>
-          {Array.from(curcuit.connections).map((connection) => {
+          {Array.from(circuit.connections).map((connection) => {
             const [start, end] = connection.split("-");
             return (
               <Connection key={connection} complete start={start} end={end} />
@@ -483,6 +532,16 @@ function App() {
           )}
         </svg>
       </div>
+      {availableGates.map((gate) => (
+        <div
+          onClick={() => {
+            circuit.addGate(gate.classPointer, 300, 300);
+            forceUpdate();
+          }}
+        >
+          {gate.name}
+        </div>
+      ))}
     </div>
   );
 }
