@@ -1,38 +1,160 @@
-.App {
-  text-align: center;
+* {
+  box-sizing: border-box;
+  user-select: none;
+  /* pointer-events: none; */
 }
 
-.App-logo {
-  height: 40vmin;
+.App {
+  /* padding: 20px; */
+  color: #fff;
+}
+
+.circuit {
+  border: 2px solid #aaa;
+  height: 300px;
+  position: relative;
+  pointer-events: all;
+}
+
+.curcuit-inputs {
+  position: absolute;
+  height: 100%;
+  width: 40px;
+  left: 0;
+  /* left: -20px; */
+  top: 0;
+  background: #2222;
+  cursor: pointer;
+  z-index: 10;
+  pointer-events: all;
+}
+.curcuit-inputs:hover {
+  background: #2225;
+}
+.curcuit-outputs {
+  position: absolute;
+  height: 100%;
+  width: 40px;
+  right: 0;
+  /* right: -20px; */
+  top: 0;
+  background: #2222;
+  cursor: pointer;
+  z-index: 10;
+  pointer-events: all;
+}
+.curcuit-outputs:hover {
+  background: #2225;
+}
+
+.circuit-input {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  /* margin-left: -15px;
+  margin-top: -15px; */
+  background: #222;
+  border: 3px solid #222;
+  border-radius: 100%;
+  cursor: pointer;
+  z-index: 30;
+  pointer-events: all;
+}
+
+.circuit-input-on {
+  background: rgb(233, 104, 30);
+}
+
+.circuit-output {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  /* margin-right: -15px;
+  margin-top: -15px; */
+  background: #222;
+  border-radius: 100%;
+  cursor: pointer;
+  z-index: 30;
+  pointer-events: all;
+}
+.circuit-output-on {
+  background: rgb(233, 104, 30);
+}
+
+.circuit-output {
+}
+
+.circuit-gate {
+  border: 2px solid #000;
+  position: absolute;
+  padding: 5px;
+  background: #555;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+}
+
+.circuit-gate-not {
+  background: rgba(143, 18, 18, 0.787);
+}
+
+.circuit-gate-and {
+  background: rgba(72, 122, 228, 0.787);
+}
+
+.circuit-gate-name {
+  padding: 0 10px;
   pointer-events: none;
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.circuit-gate-inputs {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.circuit-gate-input {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+  background: #222;
+  border-radius: 100%;
+  pointer-events: all;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.circuit-gate-input-on {
+  background: rgb(243, 140, 6);
+}
+
+.circuit-gate-input + .circuit-gate-input {
+  margin-top: 5px;
+}
+
+.circuit-gate-output {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+  background: #222;
+  border-radius: 100%;
+  pointer-events: all;
+}
+
+.circuit-gate-output-on {
+  background: rgb(243, 140, 6);
+}
+
+.circuit-gate-output + .circuit-gate-output {
+  margin-top: 5px;
+}
+
+svg {
+  position: absolute;
+  height: 300px;
+  width: 100%;
+  top: -2px;
+  left: 0;
+  z-index: 100;
+  pointer-events: none;
+  stroke: #222;
+  stroke-width: 2;
 }
