@@ -230,3 +230,7 @@ button {
   font-weight: bold;
   cursor: pointer;
 }
+
+.state-manager button {
+  margin: 5px;
+}

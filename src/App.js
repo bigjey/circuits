@@ -613,7 +613,7 @@ const Connection = ({ start, end, complete = false }) => {
   return <line x1={x1} y1={y1} x2={x2} y2={y2} />;
 };
 
-const saveAppState = debounce(() => {
+const saveAppState = () => {
   try {
     const data = JSON.stringify({
       circuit: circuit.toJS(),
@@ -625,12 +625,12 @@ const saveAppState = debounce(() => {
   } catch (e) {
     console.log(e);
   }
-}, 300);
+};
 
 function App() {
   const [, updateState] = React.useState();
   const forceUpdate = React.useCallback(() => {
-    saveAppState();
+    // saveAppStateDebounced();
     updateState({});
   }, []);
 
@@ -787,44 +787,118 @@ function App() {
         </div>
         <div className="tools-gates">
           {availableGates.map((gate) => (
-            <div>
-              <button
-                className="tools-gate"
-                key={gate.name}
-                style={{ background: `#${gate.classPointer.color}` }}
-                onClick={(e) => {
-                  circuit.addGate(gate.classPointer, 50, 20);
-                  forceUpdate();
-                }}
-              >
-                {gate.name}
-              </button>
-            </div>
+            <button
+              className="tools-gate"
+              key={gate.name}
+              style={{ background: `#${gate.classPointer.color}` }}
+              onClick={(e) => {
+                circuit.addGate(gate.classPointer, 50, 20);
+                forceUpdate();
+              }}
+            >
+              {gate.name}
+            </button>
           ))}
           {customGates.map((gate) => (
-            <div>
-              <button
-                className="tools-gate"
-                key={gate.name}
-                style={{ background: `#${gate.classPointer.color}` }}
-                onClick={(e) => {
-                  if (e.shiftKey) {
-                    customGates.splice(customGates.indexOf(gate), 1);
-                  } else {
-                    circuit.addGate(gate.classPointer, 50, 20);
-                  }
-                  forceUpdate();
-                }}
-              >
-                {gate.name}
-              </button>
-            </div>
+            <button
+              className="tools-gate"
+              key={gate.name}
+              style={{ background: `#${gate.classPointer.color}` }}
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  customGates.splice(customGates.indexOf(gate), 1);
+                } else {
+                  circuit.addGate(gate.classPointer, 50, 20);
+                }
+                forceUpdate();
+              }}
+            >
+              {gate.name}
+            </button>
           ))}
         </div>
+      </div>
+      <div className="state-manager">
+        <br />
+        <button
+          onClick={() => {
+            circuit = new EmptyCurcuit();
+            forceUpdate();
+          }}
+        >
+          Reset Current Curcuit
+        </button>
+        <button
+          onClick={() => {
+            localStorage.removeItem(LOCALSTORAGE_KEY);
+            window.location.reload();
+          }}
+        >
+          Reset Whole State
+        </button>
+        <br />
+        (buggy atm):
+        <button
+          onClick={() => {
+            saveAppState();
+          }}
+        >
+          Save State
+        </button>
+        <button
+          onClick={() => {
+            loadAppState();
+            forceUpdate();
+          }}
+        >
+          Load State
+        </button>
       </div>
     </div>
   );
 }
+
+const loadAppState = () => {
+  try {
+    const json = localStorage.getItem(LOCALSTORAGE_KEY);
+    if (json) {
+      const data = JSON.parse(json);
+      const gates = data.customGates.map((v) => JSON.parse(v));
+      for (const args of gates) {
+        const gateClass = createCircuit(
+          args.name,
+          args.inputs,
+          args.outputs,
+          args.gates.map((g) => {
+            const constructorClass = availableGates
+              .concat(customGates)
+              .find(
+                (gateConstructor) =>
+                  gateConstructor.classPointer.staticName === g.constructorName
+              );
+            if (constructorClass) {
+              g.constructorClass = constructorClass.classPointer;
+            }
+            return g;
+          }),
+          args.connections
+        );
+        customGates.push({
+          name: args.name,
+          classPointer: gateClass,
+          id: availableGateId++,
+        });
+      }
+
+      circuit.fromJS(data.circuit);
+    }
+  } catch (e) {
+    console.log(e);
+    // localStorage.removeItem(LOCALSTORAGE_KEY);
+  }
+};
+
+const saveAppStateDebounced = debounce(saveAppState, 300);
 
 const EmptyCurcuit = createCircuit("BASE", 0, 0, [], []);
 
@@ -862,42 +936,5 @@ const availableGates = [
   { classPointer: NOT_Gate, name: "NOT", id: availableGateId++ },
 ];
 const customGates = [];
-try {
-  const json = localStorage.getItem(LOCALSTORAGE_KEY);
-  if (json) {
-    const data = JSON.parse(json);
-    const gates = data.customGates.map((v) => JSON.parse(v));
-    for (const args of gates) {
-      const gateClass = createCircuit(
-        args.name,
-        args.inputs,
-        args.outputs,
-        args.gates.map((g) => {
-          const constructorClass = availableGates
-            .concat(customGates)
-            .find(
-              (gateConstructor) =>
-                gateConstructor.classPointer.staticName === g.constructorName
-            );
-          if (constructorClass) {
-            g.constructorClass = constructorClass.classPointer;
-          }
-          return g;
-        }),
-        args.connections
-      );
-      customGates.push({
-        name: args.name,
-        classPointer: gateClass,
-        id: availableGateId++,
-      });
-    }
-
-    circuit.fromJS(data.circuit);
-  }
-} catch (e) {
-  console.log(e);
-  // localStorage.removeItem(LOCALSTORAGE_KEY);
-}
 
 export default App;
