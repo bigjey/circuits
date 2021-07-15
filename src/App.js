@@ -805,11 +805,7 @@ function App() {
               key={gate.name}
               style={{ background: `#${gate.classPointer.color}` }}
               onClick={(e) => {
-                if (e.shiftKey) {
-                  customGates.splice(customGates.indexOf(gate), 1);
-                } else {
-                  circuit.addGate(gate.classPointer, 50, 20);
-                }
+                circuit.addGate(gate.classPointer, 50, 20);
                 forceUpdate();
               }}
             >

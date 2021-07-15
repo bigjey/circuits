@@ -187,7 +187,7 @@ svg line:hover {
 .tools-gates {
   flex: 0 0 50%;
   align-items: flex-end;
-  text-align: right;
+  text-align: left;
 }
 .tools-gate {
   margin: 2px;
