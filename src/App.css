@@ -193,8 +193,8 @@ svg line:hover {
   margin: 2px;
   font-weight: bold;
   display: inline-block;
-  background: #fff;
-  color: #000;
+  background: #222;
+  color: #fff;
   cursor: pointer;
 }
 .tools-gate:hover {
