@@ -11,7 +11,7 @@
 
 .circuit {
   border: 2px solid #aaa;
-  height: 300px;
+  height: 500px;
   position: relative;
   pointer-events: all;
 }
@@ -29,7 +29,7 @@
   pointer-events: all;
 }
 .circuit-inputs:hover {
-  background: #2225;
+  background: #2223;
 }
 .circuit-outputs {
   position: absolute;
@@ -44,7 +44,7 @@
   pointer-events: all;
 }
 .circuit-outputs:hover {
-  background: #2225;
+  background: #2223;
 }
 
 .circuit-input {
@@ -56,12 +56,17 @@
   background: #222;
   border: 3px solid #222;
   border-radius: 100%;
-  cursor: pointer;
+  cursor: grab;
   z-index: 30;
   pointer-events: all;
 }
-
-.circuit-input-on {
+.circuit-input:hover {
+  cursor: pointer;
+  background: #444;
+  border-color: #fff;
+}
+.circuit-input-on,
+.circuit-input-on:hover {
   background: rgb(233, 104, 30);
 }
 
@@ -76,12 +81,15 @@
   cursor: pointer;
   z-index: 30;
   pointer-events: all;
+  border: 3px solid #222;
 }
 .circuit-output-on {
   background: rgb(233, 104, 30);
 }
 
-.circuit-output {
+.circuit-output:hover {
+  background: #555;
+  border-color: #eee;
 }
 
 .circuit-gate {
@@ -92,6 +100,7 @@
   z-index: 20;
   display: flex;
   align-items: center;
+  cursor: move;
 }
 
 .circuit-gate-not {
@@ -105,6 +114,7 @@
 .circuit-gate-name {
   padding: 0 10px;
   pointer-events: none;
+  font-size: 24px;
 }
 .circuit-gate-inputs {
   display: flex;
@@ -119,6 +129,9 @@
   background: #222;
   border-radius: 100%;
   pointer-events: all;
+}
+.circuit-gate-input:hover {
+  border-color: #eee;
 }
 
 .circuit-gate-input-on {
@@ -137,6 +150,10 @@
   background: #222;
   border-radius: 100%;
   pointer-events: all;
+  cursor: grab;
+}
+.circuit-gate-output:hover {
+  border-color: #eee;
 }
 
 .circuit-gate-output-on {
@@ -149,18 +166,18 @@
 
 svg {
   position: absolute;
-  height: 300px;
+  height: 500px;
   width: 100%;
   top: -2px;
   left: 0;
   z-index: 100;
   pointer-events: none;
-  stroke: #222;
+  stroke: #2226;
   stroke-width: 2;
 }
 
 svg line:hover {
-  stroke: #fff;
+  stroke: #eee;
   pointer-events: all;
 }
 
@@ -179,6 +196,9 @@ svg line:hover {
   background: #fff;
   color: #000;
   cursor: pointer;
+}
+.tools-gate:hover {
+  border-color: #eee;
 }
 .tools-save {
   flex: 0 0 50%;
