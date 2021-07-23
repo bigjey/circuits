@@ -510,6 +510,13 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
           e.stopPropagation();
         }
       }}
+      onTouchStart={(e) => {
+        if (e.shiftKey) {
+          circuit.removeGate(gate.id);
+          onRemove();
+          e.stopPropagation();
+        }
+      }}
       onMouseDown={(e) => {
         if (currentlyMovingGate) {
           return;
@@ -520,6 +527,23 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
           startMousePos: {
             x: e.clientX,
             y: e.clientY,
+          },
+          startGatePos: {
+            x: gate.position.x,
+            y: gate.position.y,
+          },
+        };
+      }}
+      onTouchMove={(e) => {
+        if (currentlyMovingGate) {
+          return;
+        }
+
+        currentlyMovingGate = {
+          gateId: gate.id,
+          startMousePos: {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
           },
           startGatePos: {
             x: gate.position.x,
@@ -543,6 +567,13 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
 
               connectionStart = null;
             }}
+            onTouchEnd={() => {
+              if (connectionStart) {
+                onConnectionMade(connectionStart, input.id);
+              }
+
+              connectionStart = null;
+            }}
           ></div>
         ))}
       </div>
@@ -556,6 +587,14 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
               output.value === 1 ? "circuit-gate-output-on" : ""
             }`}
             onMouseDown={(e) => {
+              if (connectionStart) {
+                return;
+              }
+
+              connectionStart = output.id;
+              e.stopPropagation();
+            }}
+            onTouchStart={(e) => {
               if (connectionStart) {
                 return;
               }
@@ -650,6 +689,12 @@ function App() {
 
           forceUpdate();
         }}
+        onTouchEnd={() => {
+          connectionStart = null;
+          currentlyMovingGate = null;
+
+          forceUpdate();
+        }}
         onMouseMove={(e) => {
           if (connectionStart) {
             mousePos.x = e.clientX;
@@ -660,6 +705,26 @@ function App() {
           if (currentlyMovingGate) {
             const xDiff = e.clientX - currentlyMovingGate.startMousePos.x;
             const yDiff = e.clientY - currentlyMovingGate.startMousePos.y;
+
+            const x = currentlyMovingGate.startGatePos.x + xDiff;
+            const y = currentlyMovingGate.startGatePos.y + yDiff;
+
+            circuit.gates[currentlyMovingGate.gateId].position.x = x;
+            circuit.gates[currentlyMovingGate.gateId].position.y = y;
+
+            forceUpdate();
+          }
+        }}
+        onTouchMove={(e) => {
+          if (connectionStart) {
+            mousePos.x = e.touches[0].clientX;
+            mousePos.y = e.touches[0].clientY;
+            forceUpdate();
+          }
+
+          if (currentlyMovingGate) {
+            const xDiff = e.touches[0].clientX - currentlyMovingGate.startMousePos.x;
+            const yDiff = e.touches[0].clientY - currentlyMovingGate.startMousePos.y;
 
             const x = currentlyMovingGate.startGatePos.x + xDiff;
             const y = currentlyMovingGate.startGatePos.y + yDiff;
@@ -709,6 +774,13 @@ function App() {
 
               connectionStart = input.id;
             }}
+            onTouchStart={() => {
+              if (connectionStart) {
+                return;
+              }
+
+              connectionStart = input.id;
+            }}
           />
         ))}
         {Object.values(circuit.outputById).map((output) => (
@@ -723,6 +795,13 @@ function App() {
               forceUpdate();
             }}
             onMouseUp={() => {
+              if (connectionStart) {
+                onConnection(connectionStart, output.id);
+              }
+
+              connectionStart = null;
+            }}
+            onTouchEnd={() => {
               if (connectionStart) {
                 onConnection(connectionStart, output.id);
               }
