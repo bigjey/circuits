@@ -758,6 +758,8 @@ function App() {
                     .forEach((destination) => circuit.updateNode(destination));
                 }
 
+                e.stopPropagation();
+
                 forceUpdate();
               }}
               onMouseDown={() => {
