@@ -742,74 +742,76 @@ function App() {
             circuit.addInput(e.clientY - 20);
             forceUpdate();
           }}
-        />
+        >
+          {Object.values(circuit.inputById).map((input) => (
+            <InputNode
+              key={input.id}
+              input={input}
+              connections={circuit.connections}
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  circuit.removeInput(input.id);
+                } else {
+                  input.toggle();
+                  circuit
+                    .allDestinations(input.id)
+                    .forEach((destination) => circuit.updateNode(destination));
+                }
+
+                forceUpdate();
+              }}
+              onMouseDown={() => {
+                if (connectionStart) {
+                  return;
+                }
+
+                connectionStart = input.id;
+              }}
+              onTouchStart={() => {
+                if (connectionStart) {
+                  return;
+                }
+
+                connectionStart = input.id;
+              }}
+            />
+          ))}
+        </div>
         <div
           className="circuit-outputs"
           onClick={(e) => {
             circuit.addOutput(e.clientY - 20);
             forceUpdate();
           }}
-        />
-        {Object.values(circuit.inputById).map((input) => (
-          <InputNode
-            key={input.id}
-            input={input}
-            connections={circuit.connections}
-            onClick={(e) => {
-              if (e.shiftKey) {
-                circuit.removeInput(input.id);
-              } else {
-                input.toggle();
-                circuit
-                  .allDestinations(input.id)
-                  .forEach((destination) => circuit.updateNode(destination));
-              }
+        >
+          {Object.values(circuit.outputById).map((output) => (
+            <OutputNode
+              key={output.id}
+              output={output}
+              connections={circuit.connections}
+              onClick={(e) => {
+                if (e.shiftKey) {
+                  circuit.removeOutput(output.id);
+                }
+                forceUpdate();
+              }}
+              onMouseUp={() => {
+                if (connectionStart) {
+                  onConnection(connectionStart, output.id);
+                }
 
-              forceUpdate();
-            }}
-            onMouseDown={() => {
-              if (connectionStart) {
-                return;
-              }
+                connectionStart = null;
+              }}
+              onTouchEnd={() => {
+                if (connectionStart) {
+                  onConnection(connectionStart, output.id);
+                }
 
-              connectionStart = input.id;
-            }}
-            onTouchStart={() => {
-              if (connectionStart) {
-                return;
-              }
-
-              connectionStart = input.id;
-            }}
-          />
-        ))}
-        {Object.values(circuit.outputById).map((output) => (
-          <OutputNode
-            key={output.id}
-            output={output}
-            connections={circuit.connections}
-            onClick={(e) => {
-              if (e.shiftKey) {
-                circuit.removeOutput(output.id);
-              }
-              forceUpdate();
-            }}
-            onMouseUp={() => {
-              if (connectionStart) {
-                onConnection(connectionStart, output.id);
-              }
-
-              connectionStart = null;
-            }}
-            onTouchEnd={() => {
-              if (connectionStart) {
-                onConnection(connectionStart, output.id);
-              }
-
-              connectionStart = null;
-            }}
-          />
-        ))}
+                connectionStart = null;
+              }}
+            />
+          ))}
+        </div>
         {Object.values(circuit.gates).map((gate) => (
           <GateNode
             key={gate.id}
