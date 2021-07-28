@@ -17,7 +17,7 @@ const debounce = (fn, time) => {
   let timer;
   return () => {
     clearTimeout(timer);
-    timer = setTimeout(fn, timer);
+    timer = setTimeout(fn, time);
   };
 };
 
@@ -159,6 +159,14 @@ class CircuitBase {
     }
   }
 
+  getOutputsState() {
+    const state = {};
+    for (const outputId of this.outputs) {
+      state[outputId] = this.outputById[outputId].value;
+    }
+    return state;
+  }
+
   addInput(y) {
     const input = new Input(`${this.id}:i${this._inputId++}`, 0, y);
 
@@ -266,7 +274,7 @@ class CircuitBase {
   updateNode(nodeId) {
     const [gateId] = nodeId.split(":");
     if (this.gates[gateId]) {
-      this.updateGate(gateId);
+      this.updateGate(gateId, nodeId);
     } else if (this.outputById[nodeId]) {
       this.updateOutput(nodeId);
     } else {
@@ -274,12 +282,16 @@ class CircuitBase {
     }
   }
 
-  updateGate(gateId) {
+  updateGate(gateId, nodeId) {
     const gate = this.gates[gateId];
 
-    for (const inputId of gate.inputs) {
-      const input = gate.inputById[inputId];
+    for (const iId of gate.inputs) {
+      if (iId !== nodeId) {
+        continue;
+      }
+      const input = gate.inputById[iId];
       input.state = 0;
+      // update only if we potentially change from 0->1 or 1->0
       for (const source of this.allSources(input.id)) {
         const value = this.getSourceValue(source);
         if (value === 1) {
@@ -289,10 +301,14 @@ class CircuitBase {
       }
     }
 
+    const prevState = gate.getOutputsState();
     gate.evaluate();
 
     for (const outputId of gate.outputs) {
       const output = gate.outputById[outputId];
+      if (prevState[outputId] === output.value) {
+        continue;
+      }
       for (const destination of this.allDestinations(output.id)) {
         this.updateNode(destination);
       }
@@ -723,8 +739,10 @@ function App() {
           }
 
           if (currentlyMovingGate) {
-            const xDiff = e.touches[0].clientX - currentlyMovingGate.startMousePos.x;
-            const yDiff = e.touches[0].clientY - currentlyMovingGate.startMousePos.y;
+            const xDiff =
+              e.touches[0].clientX - currentlyMovingGate.startMousePos.x;
+            const yDiff =
+              e.touches[0].clientY - currentlyMovingGate.startMousePos.y;
 
             const x = currentlyMovingGate.startGatePos.x + xDiff;
             const y = currentlyMovingGate.startGatePos.y + yDiff;
