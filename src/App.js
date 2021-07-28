@@ -24,7 +24,7 @@ const debounce = (fn, time) => {
 class Input {
   position = { x: 0, y: 0 };
 
-  state = 0;
+  state = undefined;
 
   constructor(id, x, y) {
     this.id = id;
@@ -37,7 +37,7 @@ class Input {
   }
 
   toggle() {
-    if (this.state === 0) {
+    if (!this.state) {
       this.state = 1;
     } else {
       this.state = 0;
@@ -56,7 +56,7 @@ class Input {
 class Output {
   position = { x: 0, y: 0 };
 
-  state = 0;
+  state = undefined;
 
   constructor(id, x, y) {
     this.id = id;
@@ -147,12 +147,12 @@ class CircuitBase {
     if (evaluationFn) {
       this.evaluate = () => evaluationFn(this);
     }
-
-    this.evaluate();
   }
 
   evaluate() {
+    // console.log("evaluate");
     for (const input of Object.values(this.inputById)) {
+      // console.log("  evaluate", input.id);
       this.allDestinations(input.id).forEach((nodeId) =>
         this.updateNode(nodeId)
       );
@@ -183,6 +183,8 @@ class CircuitBase {
 
   addGate(gateClass, x, y) {
     const gate = new gateClass(x, y);
+
+    gate.evaluate();
 
     this.gates[gate.id] = gate;
   }
@@ -303,6 +305,9 @@ class CircuitBase {
 
     const prevState = gate.getOutputsState();
     gate.evaluate();
+    const newState = gate.getOutputsState();
+
+    // console.log(prevState, newState);
 
     for (const outputId of gate.outputs) {
       const output = gate.outputById[outputId];
@@ -771,9 +776,10 @@ function App() {
                   circuit.removeInput(input.id);
                 } else {
                   input.toggle();
-                  circuit
-                    .allDestinations(input.id)
-                    .forEach((destination) => circuit.updateNode(destination));
+                  circuit.allDestinations(input.id).forEach((destination) => {
+                    // console.log("update after toggle", destination);
+                    circuit.updateNode(destination);
+                  });
                 }
 
                 e.stopPropagation();
