@@ -457,6 +457,20 @@ class CircuitBase {
       this.updateGate(gate.id);
     });
   }
+
+  getNodeValue(nodeId) {
+    if (this.inputById[nodeId]) {
+      return this.inputById[nodeId].value;
+    }
+
+    for (const gate of Object.values(this.gates)) {
+      if (gate.outputById[nodeId]) {
+        return gate.outputById[nodeId].value;
+      }
+    }
+
+    return 0;
+  }
 }
 
 let globalCircuitId = 0;
@@ -639,6 +653,8 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
 const Connection = ({ start, end, complete = false }) => {
   let x1, y1, x2, y2;
 
+  const isActive = circuit.getNodeValue(start) === 1;
+
   const [, updateState] = React.useState();
   const forceUpdate = React.useCallback(() => {
     updateState({});
@@ -679,6 +695,7 @@ const Connection = ({ start, end, complete = false }) => {
       // prettier-ignore
       if (curlyFries) return (
         <path
+        className={isActive? 'active' : ''}
           fill="none"
           d={`M${x1},${y1}
               C${cx1},${cy1} ${cx2},${cy2}
@@ -715,8 +732,9 @@ const Connection = ({ start, end, complete = false }) => {
       cy4 = y2;
 
       // prettier-ignore
-      if (curlyFries)return (
+      if (curlyFries) return (
         <path
+          className={isActive? 'active' : ''}
           fill="none"
           d={`M${x1},${y1}
               C${cx1},${cy1} ${cx2},${cy2} ${hx1},${hy1}
@@ -740,7 +758,15 @@ const Connection = ({ start, end, complete = false }) => {
     y2 = mousePos.y;
   }
 
-  return <line x1={x1} y1={y1} x2={x2} y2={y2} />;
+  return (
+    <line
+      className={isActive ? "active" : ""}
+      x1={x1}
+      y1={y1}
+      x2={x2}
+      y2={y2}
+    />
+  );
 };
 
 const saveAppState = () => {
@@ -769,14 +795,6 @@ function App() {
 
     forceUpdate();
   };
-
-  React.useCallback(() => {
-    const callback = () => {
-      console.log("drop 2");
-    };
-    document.addEventListener("drop", callback, false);
-    return document.removeEventListener("drop", callback, false);
-  }, []);
 
   return (
     <div
@@ -956,11 +974,7 @@ function App() {
             onRemove={() => forceUpdate()}
           />
         ))}
-        <svg
-          onDrop={() => {
-            console.log("on drop");
-          }}
-        >
+        <svg>
           {Array.from(circuit.connections).map((connection) => {
             const [start, end] = connection.split("-");
             return (
@@ -1010,7 +1024,7 @@ function App() {
               curlyFries = !curlyFries;
               forceUpdate();
             }}
-            class="toggle-curly-fries"
+            className="toggle-curly-fries"
           >
             Curves: {curlyFries ? "ON" : "OFF"}
           </button>

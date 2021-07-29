@@ -67,7 +67,7 @@
 }
 .circuit-input-on,
 .circuit-input-on:hover {
-  background: rgb(233, 104, 30);
+  background: rgb(243, 140, 6);
 }
 
 .circuit-output {
@@ -84,7 +84,7 @@
   border: 3px solid #222;
 }
 .circuit-output-on {
-  background: rgb(233, 104, 30);
+  background: rgb(243, 140, 6);
 }
 
 .circuit-output:hover {
@@ -97,7 +97,7 @@
   position: absolute;
   padding: 5px;
   background: #555;
-  z-index: 2;
+  z-index: 20;
   display: flex;
   align-items: center;
   cursor: move;
@@ -172,15 +172,14 @@ svg {
   width: 100%;
   top: -2px;
   left: 0;
-  z-index: 5;
+  z-index: 30;
   pointer-events: none;
   stroke: #2226;
   stroke-width: 3;
 }
 
-svg line:hover {
-  stroke: #eee;
-  pointer-events: all;
+svg line.active {
+  stroke: rgb(243, 140, 6);
 }
 
 .tools {
