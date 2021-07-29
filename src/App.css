@@ -178,7 +178,8 @@ svg {
   stroke-width: 3;
 }
 
-svg line.active {
+svg line.active,
+svg path.active {
   stroke: rgb(243, 140, 6);
 }
 
