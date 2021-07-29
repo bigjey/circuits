@@ -638,6 +638,7 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
 
 const Connection = ({ start, end, complete = false }) => {
   let x1, y1, x2, y2;
+  let cx1, cy1, cx2, cy2;
 
   const [, updateState] = React.useState();
   const forceUpdate = React.useCallback(() => {
@@ -663,8 +664,25 @@ const Connection = ({ start, end, complete = false }) => {
 
     x1 = startPos.x + startPos.width / 2;
     y1 = startPos.y + startPos.height / 2;
+
     x2 = endPos.x + endPos.width / 2;
     y2 = endPos.y + endPos.height / 2;
+
+    cx1 = x1 + (x2 - x1) * 0.8;
+    cy1 = y1;
+
+    cx2 = x1 + (x2 - x1) * 0.2;
+    cy2 = y2;
+
+    // prettier-ignore
+    return (
+      <path
+        fill="none"
+        d={`M${x1},${y1}
+            C${cx1},${cy1} ${cx2},${cy2}
+            ${x2},${y2}`}
+      />
+    );
   } else {
     if (!startNode) {
       return null;
@@ -674,6 +692,7 @@ const Connection = ({ start, end, complete = false }) => {
 
     x1 = startPos.x + startPos.width / 2;
     y1 = startPos.y + startPos.height / 2;
+
     x2 = mousePos.x;
     y2 = mousePos.y;
   }
