@@ -532,11 +532,11 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
         }
       }}
       onTouchStart={(e) => {
-        if (e.shiftKey) {
-          circuit.removeGate(gate.id);
-          onRemove();
-          e.stopPropagation();
-        }
+        // if (e.shiftKey) {
+        //   circuit.removeGate(gate.id);
+        //   onRemove();
+        //   e.stopPropagation();
+        // }
       }}
       onMouseDown={(e) => {
         if (currentlyMovingGate) {
@@ -556,21 +556,20 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
         };
       }}
       onTouchMove={(e) => {
-        if (currentlyMovingGate) {
-          return;
-        }
-
-        currentlyMovingGate = {
-          gateId: gate.id,
-          startMousePos: {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY,
-          },
-          startGatePos: {
-            x: gate.position.x,
-            y: gate.position.y,
-          },
-        };
+        // if (currentlyMovingGate) {
+        //   return;
+        // }
+        // currentlyMovingGate = {
+        //   gateId: gate.id,
+        //   startMousePos: {
+        //     x: e.touches[0].clientX,
+        //     y: e.touches[0].clientY,
+        //   },
+        //   startGatePos: {
+        //     x: gate.position.x,
+        //     y: gate.position.y,
+        //   },
+        // };
       }}
     >
       <div className="circuit-gate-inputs">
@@ -581,19 +580,24 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
             className={`circuit-gate-input ${
               input.value === 1 ? "circuit-gate-input-on" : ""
             }`}
-            onMouseUp={() => {
+            onMouseDown={(e) => {
               if (connectionStart) {
+                e.stopPropagation();
                 onConnectionMade(connectionStart, input.id);
               }
-
-              connectionStart = null;
+            }}
+            onMouseUp={(e) => {
+              if (connectionStart) {
+                e.stopPropagation();
+                onConnectionMade(connectionStart, input.id);
+                connectionStart = null;
+              }
             }}
             onTouchEnd={() => {
-              if (connectionStart) {
-                onConnectionMade(connectionStart, input.id);
-              }
-
-              connectionStart = null;
+              // if (connectionStart) {
+              //   onConnectionMade(connectionStart, input.id);
+              // }
+              // connectionStart = null;
             }}
           ></div>
         ))}
@@ -613,15 +617,17 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
               }
 
               connectionStart = output.id;
+              mousePos.x = e.clientX;
+              mousePos.y = e.clientY;
+
               e.stopPropagation();
             }}
             onTouchStart={(e) => {
-              if (connectionStart) {
-                return;
-              }
-
-              connectionStart = output.id;
-              e.stopPropagation();
+              // if (connectionStart) {
+              //   return;
+              // }
+              // connectionStart = output.id;
+              // e.stopPropagation();
             }}
           ></div>
         ))}
@@ -639,7 +645,9 @@ const Connection = ({ start, end, complete = false }) => {
   }, []);
 
   React.useEffect(() => {
-    setImmediate(forceUpdate);
+    const timer = setImmediate(forceUpdate);
+
+    return () => clearImmediate(timer);
   }, []);
 
   const startNode = document.getElementById(start);
@@ -704,23 +712,32 @@ function App() {
     <div className="App">
       <div
         className="circuit"
+        onMouseDown={() => {
+          if (connectionStart) {
+            connectionStart = null;
+            forceUpdate();
+          }
+        }}
         onMouseUp={() => {
-          connectionStart = null;
-          currentlyMovingGate = null;
-
-          forceUpdate();
+          if (currentlyMovingGate) {
+            currentlyMovingGate = null;
+            forceUpdate();
+          }
         }}
         onTouchEnd={() => {
-          connectionStart = null;
-          currentlyMovingGate = null;
-
-          forceUpdate();
+          // const shouldUpdate = connectionStart || currentlyMovingGate;
+          // connectionStart = null;
+          // currentlyMovingGate = null;
+          // if (shouldUpdate) {
+          //   forceUpdate();
+          // }
         }}
         onMouseMove={(e) => {
+          let shouldUpdate = false;
           if (connectionStart) {
             mousePos.x = e.clientX;
             mousePos.y = e.clientY;
-            forceUpdate();
+            shouldUpdate = true;
           }
 
           if (currentlyMovingGate) {
@@ -733,30 +750,30 @@ function App() {
             circuit.gates[currentlyMovingGate.gateId].position.x = x;
             circuit.gates[currentlyMovingGate.gateId].position.y = y;
 
+            shouldUpdate = true;
+          }
+
+          if (shouldUpdate) {
             forceUpdate();
           }
         }}
         onTouchMove={(e) => {
-          if (connectionStart) {
-            mousePos.x = e.touches[0].clientX;
-            mousePos.y = e.touches[0].clientY;
-            forceUpdate();
-          }
-
-          if (currentlyMovingGate) {
-            const xDiff =
-              e.touches[0].clientX - currentlyMovingGate.startMousePos.x;
-            const yDiff =
-              e.touches[0].clientY - currentlyMovingGate.startMousePos.y;
-
-            const x = currentlyMovingGate.startGatePos.x + xDiff;
-            const y = currentlyMovingGate.startGatePos.y + yDiff;
-
-            circuit.gates[currentlyMovingGate.gateId].position.x = x;
-            circuit.gates[currentlyMovingGate.gateId].position.y = y;
-
-            forceUpdate();
-          }
+          // if (connectionStart) {
+          //   mousePos.x = e.touches[0].clientX;
+          //   mousePos.y = e.touches[0].clientY;
+          //   forceUpdate();
+          // }
+          // if (currentlyMovingGate) {
+          //   const xDiff =
+          //     e.touches[0].clientX - currentlyMovingGate.startMousePos.x;
+          //   const yDiff =
+          //     e.touches[0].clientY - currentlyMovingGate.startMousePos.y;
+          //   const x = currentlyMovingGate.startGatePos.x + xDiff;
+          //   const y = currentlyMovingGate.startGatePos.y + yDiff;
+          //   circuit.gates[currentlyMovingGate.gateId].position.x = x;
+          //   circuit.gates[currentlyMovingGate.gateId].position.y = y;
+          //   forceUpdate();
+          // }
         }}
       >
         <div
@@ -771,34 +788,39 @@ function App() {
               key={input.id}
               input={input}
               connections={circuit.connections}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                if (!connectionStart) {
+                  connectionStart = input.id;
+                  mousePos.x = e.clientX;
+                  mousePos.y = e.clientY;
+                }
+              }}
+              onMouseUp={(e) => {
+                e.stopPropagation();
+              }}
               onClick={(e) => {
+                e.stopPropagation();
                 if (e.shiftKey) {
                   circuit.removeInput(input.id);
+                } else if (e.ctrlKey) {
+                  connectionStart = input.id;
+                  mousePos.x = e.clientX;
+                  mousePos.y = e.clientY;
                 } else {
+                  connectionStart = null;
                   input.toggle();
                   circuit.allDestinations(input.id).forEach((destination) => {
-                    // console.log("update after toggle", destination);
                     circuit.updateNode(destination);
                   });
                 }
-
-                e.stopPropagation();
-
                 forceUpdate();
               }}
-              onMouseDown={() => {
-                if (connectionStart) {
-                  return;
-                }
-
-                connectionStart = input.id;
-              }}
               onTouchStart={() => {
-                if (connectionStart) {
-                  return;
-                }
-
-                connectionStart = input.id;
+                // if (connectionStart) {
+                //   return;
+                // }
+                // connectionStart = input.id;
               }}
             />
           ))}
@@ -829,11 +851,10 @@ function App() {
                 connectionStart = null;
               }}
               onTouchEnd={() => {
-                if (connectionStart) {
-                  onConnection(connectionStart, output.id);
-                }
-
-                connectionStart = null;
+                // if (connectionStart) {
+                //   onConnection(connectionStart, output.id);
+                // }
+                // connectionStart = null;
               }}
             />
           ))}
