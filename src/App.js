@@ -638,7 +638,6 @@ const GateNode = ({ gate, connections, onConnectionMade, onRemove }) => {
 
 const Connection = ({ start, end, complete = false }) => {
   let x1, y1, x2, y2;
-  let cx1, cy1, cx2, cy2;
 
   const [, updateState] = React.useState();
   const forceUpdate = React.useCallback(() => {
@@ -668,21 +667,65 @@ const Connection = ({ start, end, complete = false }) => {
     x2 = endPos.x + endPos.width / 2;
     y2 = endPos.y + endPos.height / 2;
 
-    cx1 = x1 + (x2 - x1) * 0.8;
-    cy1 = y1;
+    if (x2 - x1 > 100) {
+      let cx1, cy1, cx2, cy2;
 
-    cx2 = x1 + (x2 - x1) * 0.2;
-    cy2 = y2;
+      cx1 = x1 + (x2 - x1) * 0.8;
+      cy1 = y1;
 
-    // prettier-ignore
-    return (
-      <path
-        fill="none"
-        d={`M${x1},${y1}
-            C${cx1},${cy1} ${cx2},${cy2}
-            ${x2},${y2}`}
-      />
-    );
+      cx2 = x1 + (x2 - x1) * 0.2;
+      cy2 = y2;
+
+      // prettier-ignore
+      if (curlyFries) return (
+        <path
+          fill="none"
+          d={`M${x1},${y1}
+              C${cx1},${cy1} ${cx2},${cy2}
+              ${x2},${y2}`}
+        />
+      );
+    } else {
+      let cx1, cy1, cx2, cy2;
+      let hx1, hy1, hx2, hy2;
+      let cx3, cy3, cx4, cy4;
+
+      let tooClose = x2 - x1 > 0;
+
+      const halfY = Math.abs(y2 - y1) * 0.5;
+      const midY = y1 + (y2 - y1) * 0.5;
+      const midX = x1 + (x2 - x1) * 0.5;
+
+      cx1 = x1 + halfY;
+      cy1 = y1;
+
+      cx2 = x1 + halfY;
+      cy2 = midY;
+
+      hx1 = tooClose ? midX : x1;
+      hy1 = cy2;
+
+      hx2 = tooClose ? midX : x2;
+      hy2 = y1 + halfY;
+
+      cx3 = x2 - halfY;
+      cy3 = midY;
+
+      cx4 = x2 - halfY;
+      cy4 = y2;
+
+      // prettier-ignore
+      if (curlyFries)return (
+        <path
+          fill="none"
+          d={`M${x1},${y1}
+              C${cx1},${cy1} ${cx2},${cy2} ${hx1},${hy1}
+              H${hx2}
+              C${cx3},${cy3} ${cx4},${cy4} ${x2},${y2}
+          `}
+        />
+      );
+    }
   } else {
     if (!startNode) {
       return null;
@@ -961,6 +1004,16 @@ function App() {
           >
             Create
           </button>
+          &nbsp;
+          <button
+            onClick={() => {
+              curlyFries = !curlyFries;
+              forceUpdate();
+            }}
+            class="toggle-curly-fries"
+          >
+            Curves: {curlyFries ? "ON" : "OFF"}
+          </button>
         </div>
         <div className="tools-gates">
           {availableGates.concat(customGates).map((gate) => (
@@ -1111,6 +1164,7 @@ const NOT_Gate = createCircuit("NOT", 1, 1, [], [], function (gate) {
 let connectionStart = null;
 let currentlyMovingGate = null;
 let currentlyDraggingGate = null;
+let curlyFries = false;
 let mousePos = { x: 0, y: 0 };
 let availableGateId = 1;
 const availableGates = [
