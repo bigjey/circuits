@@ -708,10 +708,34 @@ function App() {
     forceUpdate();
   };
 
+  React.useCallback(() => {
+    const callback = () => {
+      console.log("drop 2");
+    };
+    document.addEventListener("drop", callback, false);
+    return document.removeEventListener("drop", callback, false);
+  }, []);
+
   return (
-    <div className="App">
+    <div
+      className="App"
+      onDragOver={(e) => {
+        e.preventDefault();
+      }}
+    >
       <div
         className="circuit"
+        onDrop={(e) => {
+          if (currentlyDraggingGate) {
+            circuit.addGate(
+              currentlyDraggingGate.classPointer,
+              e.clientX,
+              e.clientY
+            );
+            currentlyDraggingGate = null;
+            forceUpdate();
+          }
+        }}
         onMouseDown={() => {
           if (connectionStart) {
             connectionStart = null;
@@ -870,7 +894,11 @@ function App() {
             onRemove={() => forceUpdate()}
           />
         ))}
-        <svg>
+        <svg
+          onDrop={() => {
+            console.log("on drop");
+          }}
+        >
           {Array.from(circuit.connections).map((connection) => {
             const [start, end] = connection.split("-");
             return (
@@ -916,7 +944,7 @@ function App() {
           </button>
         </div>
         <div className="tools-gates">
-          {availableGates.map((gate) => (
+          {availableGates.concat(customGates).map((gate) => (
             <button
               className="tools-gate"
               key={gate.name}
@@ -925,23 +953,31 @@ function App() {
                 circuit.addGate(gate.classPointer, 50, 20);
                 forceUpdate();
               }}
-            >
-              {gate.name}
-            </button>
-          ))}
-          {customGates.map((gate) => (
-            <button
-              className="tools-gate"
-              key={gate.name}
-              style={{ background: `#${gate.classPointer.color}` }}
-              onClick={(e) => {
-                circuit.addGate(gate.classPointer, 50, 20);
-                forceUpdate();
+              draggable="true"
+              onDragStart={(e) => {
+                currentlyDraggingGate = gate;
               }}
             >
               {gate.name}
             </button>
           ))}
+          {/* {customGates.map((gate) => (
+            <button
+              className="tools-gate"
+              key={gate.name}
+              style={{ background: `#${gate.classPointer.color}` }}
+              onClick={(e) => {
+                console.log("click");
+                circuit.addGate(gate.classPointer, 50, 20);
+                forceUpdate();
+              }}
+              onDragStart={() => {
+                console.log("drag start");
+              }}
+            >
+              {gate.name}
+            </button>
+          ))} */}
         </div>
       </div>
       <div className="state-manager">
@@ -1055,6 +1091,7 @@ const NOT_Gate = createCircuit("NOT", 1, 1, [], [], function (gate) {
 
 let connectionStart = null;
 let currentlyMovingGate = null;
+let currentlyDraggingGate = null;
 let mousePos = { x: 0, y: 0 };
 let availableGateId = 1;
 const availableGates = [
