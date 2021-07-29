@@ -828,6 +828,7 @@ function App() {
         <div
           className="circuit-outputs"
           onClick={(e) => {
+            e.stopPropagation();
             circuit.addOutput(e.clientY - 20);
             forceUpdate();
           }}
@@ -838,6 +839,7 @@ function App() {
               output={output}
               connections={circuit.connections}
               onClick={(e) => {
+                e.stopPropagation();
                 if (e.shiftKey) {
                   circuit.removeOutput(output.id);
                 }
